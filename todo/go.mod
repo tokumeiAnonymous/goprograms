@@ -1,3 +1,3 @@
-module pragprog.com/rggo/goprograms/todo
+module github.com/tokumeiAnonymous/goprograms/todo
 
 go 1.21.0

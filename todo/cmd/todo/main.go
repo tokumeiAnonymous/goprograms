@@ -8,7 +8,7 @@ import (
 	"os"
 	"strings"
 
-	"pragprog.com/rggo/goprograms/todo"
+	"github.com/tokumeiAnonymous/goprograms/todo"
 )
 
 var todoFileName = ".todo.json"

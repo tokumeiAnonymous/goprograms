@@ -1,2 +1,3 @@
 *.todo.json
 .vscode
+.DS_Store

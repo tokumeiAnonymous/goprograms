@@ -4,7 +4,7 @@ import (
 	"os"
 	"testing"
 
-	"pragprog.com/rggo/goprograms/todo"
+	"github.com/tokumeiAnonymous/goprograms/todo"
 )
 
 func TestAdd(t *testing.T) {
