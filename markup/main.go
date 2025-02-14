@@ -4,8 +4,11 @@ import (
 	"bytes"
 	"flag"
 	"fmt"
+	"io"
 	"os"
-	"path/filepath"
+	"os/exec"
+	"runtime"
+	"time"
 
 	"github.com/microcosm-cc/bluemonday"
 	"github.com/russross/blackfriday/v2"
@@ -25,16 +28,30 @@ const (
 	`
 )
 
-func run(filename string) error {
+func run(filename string, out io.Writer, skipPreview bool) error {
 	// Read all the data from the input file and check for errors
 	input, err := os.ReadFile(filename)
 	if err != nil {
 		return err
 	}
+	temp, err := os.CreateTemp("", "mdp*.html")
+	if err != nil {
+		fmt.Println("Error creating temp file:", err)
+		return err
+	}
 	htmlData := parseContent(input)
-	outName := fmt.Sprintf("%s.html", filepath.Base(filename))
-	fmt.Println(outName)
-	return saveHTML(outName, htmlData)
+	outName := temp.Name()
+	fmt.Fprintln(out, outName)
+
+	if err := saveHTML(outName, htmlData); err != nil {
+		return err
+	}
+	if skipPreview {
+		os.Remove(outName)
+		return nil
+	}
+	defer os.Remove(outName)
+	return preview(outName)
 }
 
 func parseContent(input []byte) []byte {
@@ -55,16 +72,41 @@ func saveHTML(outFname string, data []byte) error {
 	return os.WriteFile(outFname, data, 0644)
 }
 
+func preview(fname string) error {
+	cName := ""
+	cParams := []string{}
+
+	if runtime.GOOS == "linux" {
+		cName = "xdg-open"
+	} else if runtime.GOOS == "windows" {
+		cName = "cmd.exe"
+		cParams = []string{"/C", "start"}
+	} else if runtime.GOOS == "darwin" {
+		cName = "open"
+	} else {
+		return fmt.Errorf("OS not supported")
+	}
+	cParams = append(cParams, fname)
+	cPath, err := exec.LookPath(cName)
+	if err != nil {
+		return err
+	}
+	err = exec.Command(cPath, cParams...).Run()
+	time.Sleep(2 * time.Second)
+	return err
+}
+
 func main() {
 	// Parse flags
 	filename := flag.String("file", "", "Markdown file to preview")
+	skipPreview := flag.Bool("s", false, "Skip auto-preview")
 	flag.Parse()
 	// If user did not provide input file, show usage
 	if *filename == "" {
 		flag.Usage()
 		os.Exit(1)
 	}
-	if err := run(*filename); err != nil {
+	if err := run(*filename, os.Stdout, *skipPreview); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
